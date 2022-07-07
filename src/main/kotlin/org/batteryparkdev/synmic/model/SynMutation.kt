@@ -2,7 +2,10 @@ package org.batteryparkdev.synmic.model
 
 import org.apache.commons.csv.CSVRecord
 import org.batteryparkdev.cosmicgraphdb.model.AbstractModel
+import org.batteryparkdev.cosmicgraphdb.model.CosmicCodingMutation
 import org.batteryparkdev.cosmicgraphdb.model.CosmicModel
+import org.batteryparkdev.neo4j.service.Neo4jConnectionService
+import org.batteryparkdev.neo4j.service.Neo4jUtils
 import org.batteryparkdev.nodeidentifier.model.NodeIdentifier
 
 /*
@@ -21,7 +24,7 @@ CSV column headings:
 
 data class RegRNA(
     val eseGain: Int, val eseLoss: Int, val essGain: Int, val essLoss: Int
-){
+): CosmicModel{
     companion object:AbstractModel {
         fun parseCSVRecord(record: CSVRecord): RegRNA =
             RegRNA(
@@ -31,12 +34,30 @@ data class RegRNA(
                 parseValidIntegerFromString(record.get("ESS Loss (RegRNA 2.0)"))
             )
     }
+
+    override fun generateLoadCosmicModelCypher(): String =
+        when (isValid()){
+            true -> " regrna_ese_gain: $eseGain, regrna_ese_loss: $eseLoss, " +
+                    " regrna_ess_gain: $essGain, regrna_ess_loss: $essLoss, "
+            false -> " "
+        }
+
+    override fun getNodeIdentifier(): NodeIdentifier {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPubMedId(): Int = 0
+
+
+    override fun isValid(): Boolean  =
+        (eseGain + eseLoss + essGain + essLoss) > 0
+
 }
 
 data class SpliceAidF(
     val eseGain: Int, val eseLoss: Int, val essGain: Int, val essLoss: Int,
     val eseAndEssGain: Int, val eseAndEssLoss: Int
-) {
+) : CosmicModel{
     companion object: AbstractModel {
         fun parseCSVRecord(record: CSVRecord): SpliceAidF =
             SpliceAidF(
@@ -48,9 +69,28 @@ data class SpliceAidF(
                 parseValidIntegerFromString(record.get("ESE & ESS Loss (SpliceAidF)"))
             )
     }
+
+    override fun generateLoadCosmicModelCypher(): String =
+        when (isValid()) {
+            true -> "spliceaidf_ese_gain: $eseGain, spliceaidf_ese_loss: $eseLoss, " +
+                    " spiceaidf_ess_gain: $essGain, spliceaidf_ess_loss: $essLoss, " +
+                    " spliceaidf_ese_ess_gain: $eseAndEssGain, " +
+                    " spliceaidf_ese_ess_loss: $eseAndEssLoss, "
+            false -> " "
+        }
+
+    override fun getNodeIdentifier(): NodeIdentifier {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPubMedId(): Int  = 0
+
+    override fun isValid(): Boolean =
+        ( eseGain + eseLoss + essGain + essLoss + eseAndEssGain + eseAndEssLoss) > 0
 }
 
 data class SynMutation(
+    val key: Int,   // unique key
     val geneName: String, val transcriptId: String, val mutationId: String,
     val ntMutation: String, val aaMutation: String, val mutationGenomePosition: String,
     val chromosome: String, val mutationStart: Int, val mutationEnd: Int, val strand: String,
@@ -63,23 +103,68 @@ data class SynMutation(
     val distanceToExonBoundary: Int, val regRna: RegRNA, val spliceAidF: SpliceAidF,
     val anyEseEssChange: Int
 ) : CosmicModel {
-    override fun generateLoadCosmicModelCypher(): String {
-        TODO("Not yet implemented")
-    }
 
-    override fun getNodeIdentifier(): NodeIdentifier {
-        TODO("Not yet implemented")
-    }
+    override fun generateLoadCosmicModelCypher(): String = mergeNewNodeCypher
+        .plus(generateGeneMutationCollectionRelationshipCypher(geneName, CosmicCodingMutation.nodename))
+        .plus(generateSampleRelationship())
+        .plus(" RETURN ${SynMutation.nodename}")
+
+    override fun getNodeIdentifier(): NodeIdentifier = NodeIdentifier("SynonymousMutation","key",
+    key.toString())
+
 
     override fun getPubMedId(): Int = 0
 
-    override fun isValid(): Boolean {
-        TODO("Not yet implemented")
+    override fun isValid(): Boolean =
+        geneName.isNotEmpty().and(sampleId.isNotEmpty()).and(mutationId.isNotEmpty())
+            .and(ntMutation.isNotEmpty())
+
+
+    // The SynMICdb.csv file uses the heading "Sample ID" for what is really the sample name
+    private fun generateSampleRelationship(): String {
+        val sampleId =
+            parseValidIntegerFromString(Neo4jConnectionService.executeCypherCommand(
+                "MATCH (cs:CosmicSample{sample_name: "
+                    .plus(Neo4jUtils.formatPropertyValue(sampleId))
+                    .plus("}) RETURN cs.sample_id")
+            ))
+        return generateSampleMutationCollectionRelationshipCypher(sampleId, SynMutation.nodename)
     }
 
+    private val mergeNewNodeCypher = "CALL apoc.merge.node( [\"SynonymousMutation\"], " +
+            " {key: $key}, " +
+            "{ gene_name: ${Neo4jUtils.formatPropertyValue(geneName)}, " +
+            " transcript_id: ${Neo4jUtils.formatPropertyValue(transcriptId)}," +
+            " mutation_id: ${Neo4jUtils.formatPropertyValue(mutationId)}," +
+            " nt_mutation: ${Neo4jUtils.formatPropertyValue(ntMutation)}, " +
+            " aa_mutation: ${Neo4jUtils.formatPropertyValue(aaMutation)}, " +
+            " mutation_genome_position: ${Neo4jUtils.formatPropertyValue(mutationGenomePosition)}, " +
+            " chromosome: ${Neo4jUtils.formatPropertyValue(chromosome)}, " +
+            " mutation_start: $mutationStart, mutation_end: $mutationEnd, " +
+            " signature_normalized_frequency: $signatureNormalizedFrequency, " +
+            " avg_mutation_load: $avgMutationLoad, " +
+            " alternative_events: ${Neo4jUtils.formatPropertyValue(alternativeEvents)}, " +
+            " snp: ${Neo4jUtils.formatPropertyValue(snp)}, " +
+            " conservation: ${Neo4jUtils.formatPropertyValue(conservation)}, " +
+            " structure_change_score: ${Neo4jUtils.formatPropertyValue(structureChangeScore)}, " +
+            " structure_change_significance: ${Neo4jUtils.formatPropertyValue(structureChangeSignificance)}," +
+            " synmicdb_score: $synmicdbScore, sample_id: ${Neo4jUtils.formatPropertyValue(sampleId)}, " +
+            " organ_system: ${Neo4jUtils.formatPropertyValue(organSystem)}, " +
+            " site: ${Neo4jUtils.formatPropertyValue(site)}, histology: ${Neo4jUtils.formatPropertyValue(histology)}, " +
+            " mutation_load_sample: $mutationLoadSample, position_in cds: $positionInCDS, " +
+            " cgc_gene: $cgcGene, exon_type: ${Neo4jUtils.formatPropertyValue(exonType)}, " +
+            " distance_to_exon_boundary: $distanceToExonBoundary, any_ese_ess_change: $anyEseEssChange, "
+                .plus(regRna.generateLoadCosmicModelCypher())
+                .plus(spliceAidF.generateLoadCosmicModelCypher())
+                .plus(" created: datetime()},{}) YIELD node as ${SynMutation.nodename} \n")
+
+
     companion object : AbstractModel {
+        val nodename = "synonymous_mutation"
+
         fun parseCSVRecord(record: CSVRecord): SynMutation =
             SynMutation(
+                record.toString().hashCode(),
                 record.get("Gene Name"),
                 record.get("Transcript ID"),
                 record.get("Mutation ID"),
