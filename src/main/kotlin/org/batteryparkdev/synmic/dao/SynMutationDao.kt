@@ -2,7 +2,6 @@ package org.batteryparkdev.synmic.dao
 
 import org.batteryparkdev.genomicgraphcore.common.CoreModel
 import org.batteryparkdev.genomicgraphcore.common.CoreModelDao
-import org.batteryparkdev.genomicgraphcore.common.formatNeo4jPropertyValue
 import org.batteryparkdev.genomicgraphcore.neo4j.nodeidentifier.NodeIdentifier
 import org.batteryparkdev.genomicgraphcore.neo4j.nodeidentifier.NodeIdentifierDao
 import org.batteryparkdev.genomicgraphcore.neo4j.nodeidentifier.RelationshipDefinition
@@ -14,29 +13,29 @@ class SynMutationDao( private val synmut: SynMutation) {
 
     fun generateSynMutationCypher(): String = mergeNewNodeCypher(synmut)
         .plus(" RETURN ${SynMutation.nodename}")
-
+ // n.b String property values in this model are already in double quotes
     private fun mergeNewNodeCypher(synmut: SynMutation): String = "CALL apoc.merge.node( [\"SynonymousMutation\"], " +
-            " {key: ${synmut.key}, " +
-            "{ gene_name: ${synmut.geneName.formatNeo4jPropertyValue()}, " +
-            " transcript_id: ${synmut.transcriptId.formatNeo4jPropertyValue()}," +
-            " mutation_id: ${synmut.mutationId.formatNeo4jPropertyValue()}," +
-            " nt_mutation: ${synmut.ntMutation.formatNeo4jPropertyValue()}, " +
-            " aa_mutation: ${synmut.aaMutation.formatNeo4jPropertyValue()}, " +
-            " mutation_genome_position: ${synmut.mutationGenomePosition.formatNeo4jPropertyValue()}, " +
-            " chromosome: ${synmut.chromosome.formatNeo4jPropertyValue()}, " +
+            " {key: ${synmut.key}} , " +
+            "{ gene_name: ${synmut.geneName}, " +
+            " transcript_id: ${synmut.transcriptId}," +
+            " mutation_id: ${synmut.mutationId}," +
+            " nt_mutation: ${synmut.ntMutation}, " +
+            " aa_mutation: ${synmut.aaMutation}, " +
+            " mutation_genome_position: ${synmut.mutationGenomePosition}, " +
+            " chromosome: ${synmut.chromosome}, " +
             " mutation_start: ${synmut.mutationStart}, mutation_end: ${synmut.mutationEnd}, " +
             " signature_normalized_frequency: ${synmut.signatureNormalizedFrequency}, " +
             " avg_mutation_load: ${synmut.avgMutationLoad}, " +
-            " alternative_events: ${synmut.alternativeEvents.formatNeo4jPropertyValue()}, " +
-            " snp: ${synmut.snp.formatNeo4jPropertyValue()}, " +
-            " conservation: ${synmut.conservation.formatNeo4jPropertyValue()}, " +
-            " structure_change_score: ${synmut.structureChangeScore.formatNeo4jPropertyValue()}, " +
-            " structure_change_significance: ${synmut.structureChangeSignificance.formatNeo4jPropertyValue()}," +
-            " synmicdb_score: ${synmut.synmicdbScore} sample_id: ${synmut.sampleId.formatNeo4jPropertyValue()}, " +
-            " organ_system: ${synmut.organSystem.formatNeo4jPropertyValue()}, " +
-            " site: ${synmut.site.formatNeo4jPropertyValue()}, histology: ${synmut.histology.formatNeo4jPropertyValue()}, " +
-            " mutation_load_sample: ${synmut.mutationLoadSample}, position_in cds: ${synmut.positionInCDS}, " +
-            " cgc_gene: ${synmut.cgcGene}, exon_type: ${synmut.exonType.formatNeo4jPropertyValue()}, " +
+            " alternative_events: ${synmut.alternativeEvents}, " +
+            " snp: ${synmut.snp}, " +
+            " conservation: ${synmut.conservation}, " +
+            " structure_change_score: ${synmut.structureChangeScore}, " +
+            " structure_change_significance: ${synmut.structureChangeSignificance}," +
+            " synmicdb_score: ${synmut.synmicdbScore}, sample_id: ${synmut.sampleId}, " +
+            " organ_system: ${synmut.organSystem}, " +
+            " site: ${synmut.site}, histology: ${synmut.histology}, " +
+            " mutation_load_sample: ${synmut.mutationLoadSample}, position_in_cds: ${synmut.positionInCDS}, " +
+            " cgc_gene: ${synmut.cgcGene}, exon_type: ${synmut.exonType}, " +
             " distance_to_exon_boundary: ${synmut.distanceToExonBoundary}, " +
             "any_ese_ess_change: ${synmut.anyEseEssChange}, "
                 .plus(generateRegRNACypher(synmut.regRna))
@@ -65,7 +64,7 @@ class SynMutationDao( private val synmut: SynMutation) {
 
         private fun completeGeneMutationCollectionRelationship(model: CoreModel){
             val parentNode = NodeIdentifier("GeneMutationCollection", "gene_symbol",
-            model.getModelGeneSymbol())
+            model.getModelGeneSymbol().replace("\"",""))
             NodeIdentifierDao.defineRelationship(RelationshipDefinition( parentNode
                 , model.getNodeIdentifier(), "HAS_MUTATION"))
         }

@@ -137,42 +137,29 @@
             <artifactId>kotlin-logging-jvm</artifactId>
             <version>2.1.20</version>
         </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.2.10</version>
-        </dependency>
-
+<!--        <dependency>-->
+<!--            <groupId>ch.qos.logback</groupId>-->
+<!--            <artifactId>logback-classic</artifactId>-->
+<!--            <version>1.2.10</version>-->
+<!--        </dependency>-->
         <!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
             <version>3.8.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/io.ktor/ktor-client-apache -->
-        
-        
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.32</version>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/io.arrow-kt/arrow-core -->
         <dependency>
             <groupId>io.arrow-kt</groupId>
             <artifactId>arrow-core</artifactId>
             <version>1.1.2</version>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/io.arrow-kt/arrow-core-jvm -->
         <dependency>
             <groupId>io.arrow-kt</groupId>
             <artifactId>arrow-core-jvm</artifactId>
             <version>1.1.2</version>
         </dependency>
-
-
         <!-- https://mvnrepository.com/artifact/io.arrow-kt/arrow-annotations -->
         <dependency>
             <groupId>io.arrow-kt</groupId>
@@ -204,21 +191,18 @@
             <artifactId>cfg4j-git</artifactId>
             <version>${cfg4j.version}</version>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
         <dependency>
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>
             <version>0.1.55</version>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${apache.commons.io.version}</version>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/log4j/log4j -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -238,7 +222,6 @@
             <version>2.17.1</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
@@ -249,19 +232,16 @@
             <artifactId>apache-log4j-extras</artifactId>
             <version>1.2.17</version>
         </dependency>
-
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-graphdb-api</artifactId>
             <version>${neo4j.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j</artifactId>
@@ -316,6 +296,13 @@
             <artifactId>kotlin-reflect</artifactId>
             <version>1.6.10</version>
             <scope>runtime</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core -->
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-core</artifactId>
+            <version>1.6.4</version>
+            <type>pom</type>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.kotlintest/kotlintest-core -->
