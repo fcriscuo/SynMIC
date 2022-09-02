@@ -7,7 +7,7 @@ import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.csv.CSVRecord
-import org.batteryparkdev.io.CSVRecordSupplier
+import org.batteryparkdev.genomicgraphcore.common.io.CSVRecordSupplier
 import java.nio.file.Paths
 import kotlin.streams.asSequence
 
@@ -16,7 +16,6 @@ Responsible for validating the parsing of the SynMICdb.csv file to SynMutation d
  */
 
 class TestSynMutation {
-
 
     private var nodeCount = 0
     private var keySet = mutableSetOf<String>()
@@ -52,10 +51,10 @@ class TestSynMutation {
         val records = filterDuplicates(produceCSVRecords(filename))
         for (record in records) {
             nodeCount += 1
-            val synMut = SynMutation.parseCSVRecord(record)
+            val synMut = SynMutation.parseCsvRecord(record)
             // generate Cypher code for a limited number of SynMut objects
             if (nodeCount <= 50){
-                println("${synMut.generateLoadCosmicModelCypher()}\n\n")
+                println("${synMut.generateLoadModelCypher()}\n\n")
             }
            // println("**** Syn mutation gene name: ${synMut.geneName}  sample id ${synMut.sampleId}")
           //  println("  chromosome: ${synMut.chromosome}  start: ${synMut.mutationStart} " +

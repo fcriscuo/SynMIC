@@ -78,7 +78,7 @@
         </dependency>
         <!-- https://mvnrepository.com/artifact/io.github.microutils/kotlin-logging -->
 
-        <!--local dependency for Neo4jService -->
+        <!--local dependency for CosmicGraphDb -->
         <dependency>
             <groupId>org.batteryparkdev</groupId>
             <artifactId>cosmicgraphdb</artifactId>
@@ -86,14 +86,13 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/cosmicgraphdb-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
-
-        <!--local dependency for CosminGraphDb -->
+        <!--local dependency for GenomicGraphCoree -->
         <dependency>
             <groupId>org.batteryparkdev</groupId>
-            <artifactId>Neo4jService</artifactId>
+            <artifactId>genomicgraphcore</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/lib/Neo4jService-1.0-SNAPSHOT.jar</systemPath>
+            <systemPath>${project.basedir}/lib/genomicgraphcore-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
         <!-- Neo4j front end requires scala 2.12.13-->
         <!-- https://mvnrepository.com/artifact/org.scala-lang/scala-library -->
@@ -415,15 +414,13 @@
                             <!-- <option>no-arg:invokeInitializers=true</option> -->
                         </pluginOptions>
                     </configuration>
-
                     <dependencies>
-                        <!-- https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-maven-noarg -->
-                        <dependency>
-                            <groupId>org.jetbrains.kotlin</groupId>
-                            <artifactId>kotlin-maven-noarg</artifactId>
-                            <version>1.5.10</version>
-                        </dependency>
-
+                    <!-- https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-maven-noarg -->
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-noarg</artifactId>
+                        <version>1.7.10</version>
+                    </dependency>
                     </dependencies>
                 </plugin>
             </plugins>
