@@ -1,8 +1,10 @@
+
+
 :auto LOAD CSV WITH HEADERS FROM
 'file:///Volumes/SSD870/SpecializedCancerDatasets/ASCancerAtlas/ASCancer_Gene_All.csv' AS line
-
 CALL {
 WITH line
+WHERE line.id IS NOT NULL AND line.gene_name IS NOT NULL
 MERGE (asc:ASCancer{asc_id:apoc.text.replace(line.id,"^\"|\"$","")})
 SET asc.has_oncoprint = apoc.text.replace(line.has_oncoprint,"^\"|\"$",""),
   asc.event_id = apoc.text.replace(line.event_id,"^\"|\"$",""),
