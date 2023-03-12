@@ -1,18 +1,12 @@
-CALL apoc.periodic.iterate('
-CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/Cancer_Gene_Census_Hallmarks_Of_Cancer.tsv", { header:true,  sep:"TAB"})
-YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
-',' 
+// Cypher to complete SynMic graph database
 
-  ',
-{batchSize:1000, iterateList:true, parallel:true});
-
-
+// CosmicHallmark
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/Cancer_Gene_Census_Hallmarks_Of_Cancer.tsv", { header:true,  sep:"TAB"})
 YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
 ','
 WHERE NOT nodeRecord.`GENE_NAME` IS  NULL
-MERGE (n: `TestHallmark` { `HALLMARK_ID`: toInteger(lineNo) })
+MERGE (n: `CosmicHallmark` { `halmark_id`: toInteger(lineNo) })
 SET n.`gene_symbol` = nodeRecord.`GENE_NAME`
 SET n.`cell_type` = nodeRecord.`CELL_TYPE`
 SET n.`pub_id` = toInteger(trim(nodeRecord.`PUBMED_PMID`))
@@ -22,7 +16,7 @@ SET n.`description` = nodeRecord.`DESCRIPTION`
 ',
 {batchSize:1000, iterateList:true, parallel:true});
 
-
+// CosmicSample
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicSample.tsv", { header:true,  sep:"TAB"})
 YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
@@ -30,6 +24,7 @@ YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
 WHERE NOT toInteger(trim(nodeRecord.`sample_id`)) IS NULL
 MERGE (n: `CosmicSample` { `sample_id`: toInteger(trim(nodeRecord.`sample_id`)) })
 SET n.`sample_name` = nodeRecord.`sample_name`
+SET n.`tumor_id` = toInteger(trim(nodeRecord.`id_tumour`))
 SET n.`therapy_relationship` = nodeRecord.`therapy_relationship`
 SET n.`sample_differentiator` = nodeRecord.`sample_differentiator`
 SET n.`mutation_allele_specification` = nodeRecord.`mutation_allele_specification`
@@ -43,14 +38,16 @@ SET n.`cosmic_phenotype_id` = toInteger(trim(nodeRecord.`cosmic_phenotype_id`));
  ',
 {batchSize:1000, iterateList:true, parallel:true});
 
+// CosmicPatient
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicSample.tsv", { header:true,  sep:"TAB"}
 )
 YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
 ','
 WHERE NOT toInteger(trim(nodeRecord.`id_individual`)) IS NULL
-MERGE (n: `Patient` { `id_individual`: toInteger(trim(nodeRecord.`id_individual`)) })
+MERGE (n: `CosmicPatient` { `individual_id`: toInteger(trim(nodeRecord.`id_individual`)) })
 SET n.`metastatic_site` = nodeRecord.`metastatic_site`
+SET n.`tumor_id` = toInteger(trim(nodeRecord.`id_tumour`))
 SET n.`age` = toInteger(trim(nodeRecord.`age`))
 SET n.`ethnicity` = nodeRecord.`ethnicity`
 SET n.`environmental_variables` = nodeRecord.`environmental_variables`
@@ -62,23 +59,23 @@ SET n.`gender` = nodeRecord.`gender`;
  ',
 {batchSize:1000, iterateList:true, parallel:true});
 
-
+// CosmicTumor
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicSample.tsv", { header:true,  sep:"TAB"}
 )
 YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
 ','
 WHERE NOT toInteger(trim(nodeRecord.`id_tumour`)) IS NULL
-MERGE (n: `Tumor` { `id_tumour`: toInteger(trim(nodeRecord.`id_tumour`)) })
+MERGE (n: `Tumor` { `tumor_id`: toInteger(trim(nodeRecord.`id_tumour`)) })
 SET n.`drug_response` = nodeRecord.`drug_response`
 SET n.`grade` = nodeRecord.`grade`
-SET n.`age_at_tumour_recurrence` = nodeRecord.`age_at_tumour_recurrence`
+SET n.`age_at_tumor_recurrence` = nodeRecord.`age_at_tumour_recurrence`
 SET n.`stage` = nodeRecord.`stage`
 SET n.`nci_code` = nodeRecord.`nci_code`;
 ',
 {batchSize:1000, iterateList:true, parallel:true});
 
-
+// CosmicGeneCensus
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/cancer_gene_census.csv", { header:true,
 mapping:{
@@ -163,7 +160,6 @@ SET n.`HGVSG` = nodeRecord.`HGVSG`;
 {batchSize:1000, iterateList:true, parallel:true});
 
 // CosmicSampleClassification
-
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/classification.csv", { header:true}
 )
@@ -237,7 +233,6 @@ SET n.`sample_name` = nodeRecord.`sample_name`;
 
 
 // CosmicResistanceMutation
-
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicResistanceMutations.tsv", { header:true,  sep:"TAB"}
 )
@@ -263,7 +258,7 @@ SET n.`somatic_status` = nodeRecord.`Somatic Status`
 SET n.`sample_type` = nodeRecord.`Sample Type`
 SET n.`zygosity` = nodeRecord.`Zygosity`
 SET n.`genome_coordinates_grch38` = nodeRecord.`Genome Coordinates (GRCh38)`
-SET n.`tier` = toLower(trim(nodeRecord.`Tier`)) IN ['1','true','yes']
+SET n.`tier` = toInteger(trim(nodeRecord.`Tier`))
 SET n.`HGVSP` = nodeRecord.`HGVSP`
 SET n.`HGVSC` = nodeRecord.`HGVSC`
 SET n.`HGVSG` = nodeRecord.`HGVSG`;
@@ -271,7 +266,6 @@ SET n.`HGVSG` = nodeRecord.`HGVSG`;
 {batchSize:4000, iterateList:true, parallel:true});
 
 // CosmicHallmark
-
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/Cancer_Gene_Census_Hallmarks_Of_Cancer.tsv", { header:true,  sep:"TAB"}
 )
@@ -289,14 +283,12 @@ SET n.`description` = nodeRecord.`DESCRIPTION`
 {batchSize:4000, iterateList:true, parallel:true});
 
 // SynMIC
-
 CALL apoc.periodic.iterate('
-CALL apoc.load.csv("/Volumes/SSD870/SpecializedCancerDatasets/SynMICdb/", { header:true}
+CALL apoc.load.csv("/Volumes/SSD870/SpecializedCancerDatasets/SynMICdb/SynMICdb.csv", { header:true}
 )
 YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
 ','
-WHERE  NOT toInteger(trim(nodeRecord.`"SynMIC_ID"`)) IS NULL
-
+WHERE  NOT (trim(nodeRecord.`Gene Name`)) IS NULL
 MERGE (n: `SynMIC` { `synmic_id`: toInteger(lineNo) })
 SET n.`gene_symbol` = nodeRecord.`Gene Name`
 SET n.`transcript_id` = nodeRecord.`Transcript ID`
@@ -322,7 +314,7 @@ SET n.`site` = nodeRecord.`Site`
 SET n.`histology` = nodeRecord.`Histology`
 SET n.`mutation_load_sample` = toInteger(trim(nodeRecord.`Mutation Load Sample`))
 SET n.`position_in_cds` = toFloat(trim(nodeRecord.`Position in CDS`))
-SET n.`gcg_gene` = trim(nodeRecord.`CGC Gene`))
+SET n.`gcg_gene` = trim(nodeRecord.`CGC Gene`)
 SET n.`exon_type` = nodeRecord.`Exon Type`
 SET n.`distance_to_closest_exon_boundary` = nodeRecord.`Distance to Closest Exon Boundary`
 SET n.`ese_gain_(RegRNA 2.0)` = nodeRecord.`ESE Gain (RegRNA 2.0)`
@@ -339,13 +331,14 @@ SET n.`any_ese/ess_change` = nodeRecord.`Any ESE/ESS Change`;
 ',
 {batchSize:4000, iterateList:true, parallel:true});
 
-CREATE CONSTRAINT `imp_uniq_AltSpliceCancer_id` IF NOT EXISTS
-FOR (n: `AltSpliceCancer`)
-REQUIRE (n.`id`) IS UNIQUE;
 
-UNWIND $nodeRecords AS nodeRecord
-WITH *
-WHERE NOT nodeRecord.`id` IN $idsToSkip AND NOT nodeRecord.`id` IS NULL
+// ALSCancer ATlas
+CALL apoc.periodic.iterate('
+CALL apoc.load.csv("/Volumes/SSD870/SpecializedCancerDatasets/ASCancerAtlas/ASCancer_Gene_All.csv", { header:true}
+)
+YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
+','
+WHERE  NOT (trim(nodeRecord.`gene_name`)) IS NULL
 MERGE (n: `AltSpliceCancer` { `id`: nodeRecord.`id` })
 SET n.`has_oncoprint` = nodeRecord.`has_oncoprint`
 SET n.`event_id` = nodeRecord.`event_id`
@@ -385,17 +378,19 @@ SET n.`regulatory_gene` = nodeRecord.`regulatory_gene`
 SET n.`biological_function` = nodeRecord.`biological_function`
 SET n.`functional_description` = nodeRecord.`functional_description`
 SET n.`year` = toInteger(trim(nodeRecord.`year`))
-SET n.`pubmed_id` = toInteger(trim(nodeRecord.`pubmed_id`))
+SET n.`pub_id` = toInteger(trim(nodeRecord.`pubmed_id`))
 SET n.`journal` = nodeRecord.`journal`
 SET n.`title` = nodeRecord.`title`;
+',
+{batchSize:4000, iterateList:true, parallel:true});
 
-CREATE CONSTRAINT `imp_uniq_HGNC_hgnc_id` IF NOT EXISTS
-FOR (n: `HGNC`)
-REQUIRE (n.`hgnc_id`) IS UNIQUE;
-
-UNWIND $nodeRecords AS nodeRecord
-WITH *
-WHERE NOT nodeRecord.`hgnc_id` IN $idsToSkip AND NOT toInteger(trim(nodeRecord.`hgnc_id`)) IS NULL
+//HGNC
+CALL apoc.periodic.iterate('
+CALL apoc.load.csv("/Volumes/SSD870/GenomicCoreData/HGNC/hgnc_complete_set.tsv", { header:true,  sep:"TAB"}
+)
+YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
+','
+WHERE NOT toInteger(trim(nodeRecord.`hgnc_id`)) IS NULL
 MERGE (n: `HGNC` { `hgnc_id`: toInteger(trim(nodeRecord.`hgnc_id`)) })
 SET n.`gene_symbol` = nodeRecord.`symbol`
 SET n.`name` = nodeRecord.`name`
@@ -404,9 +399,9 @@ SET n.`locus_type` = nodeRecord.`locus_type`
 SET n.`status` = nodeRecord.`status`
 SET n.`location` = nodeRecord.`location`
 SET n.`location_sortable` = nodeRecord.`location_sortable`
-SET n.`alias_symbol` = nodeRecord.`alias_symbol`
-SET n.`alias_name` = nodeRecord.`alias_name`
-SET n.`prev_symbol` = nodeRecord.`prev_symbol`
+SET n.`alias_symbols` = COALESCE(split(nodeRecord.`alias_symbol`,"|")," "),
+SET n.`alias_names` = COALESCE(split(nodeRecord.`alias_name`,"|")," ")
+SET n.`prev_symbols` = COALESCE(split(nodeRecord.`prev_symbol`,"|")," ")
 SET n.`prev_name` = nodeRecord.`prev_name`
 SET n.`gene_group` = nodeRecord.`gene_group`
 SET n.`gene_group_id` = nodeRecord.`gene_group_id`
@@ -420,9 +415,9 @@ SET n.`vega_id` = nodeRecord.`vega_id`
 SET n.`ucsc_id` = nodeRecord.`ucsc_id`
 SET n.`ena` = nodeRecord.`ena`
 SET n.`refseq_accession` = nodeRecord.`refseq_accession`
-SET n.`ccds_id` = nodeRecord.`ccds_id`
-SET n.`uniprot_ids` = nodeRecord.`uniprot_ids`
-SET n.`pubmed_id` = nodeRecord.`pubmed_id`
+SET n.`ccds_ids` =  COALESCE(split(nodeRecord.`ccds_id`,"|")," ")
+SET n.`uniprot_ids` = COALESCE(split(nodeRecord.`uniprot_ids`,"|")," ")
+SET n.`pub_ids` = COALESCE(split(nodeRecord.`pubmed_id`,"|")," ")
 SET n.`mgd_id` = nodeRecord.`mgd_id`
 SET n.`rgd_id` = nodeRecord.`rgd_id`
 SET n.`lsdb` = nodeRecord.`lsdb`
@@ -431,7 +426,7 @@ SET n.`omim_id` = toInteger(trim(nodeRecord.`omim_id`))
 SET n.`mirbase` = nodeRecord.`mirbase`
 SET n.`homeodb` = nodeRecord.`homeodb`
 SET n.`snornabase` = nodeRecord.`snornabase`
-SET n.`bioparadigms_slc` = nodeRecord.`bioparadigms_slc`
+SET n.`bioparadigms_slc` = COALESCE(split(nodeRecord.`bioparadigms`,"|")," ")
 SET n.`orphanet` = toInteger(trim(nodeRecord.`orphanet`))
 SET n.`pseudogene.org` = nodeRecord.`pseudogene.org`
 SET n.`horde_id` = nodeRecord.`horde_id`
@@ -442,75 +437,79 @@ SET n.`kznf_gene_catalog` = nodeRecord.`kznf_gene_catalog`
 SET n.`mamit-trnadb` = nodeRecord.`mamit-trnadb`
 SET n.`cd` = nodeRecord.`cd`
 SET n.`lncrnadb` = nodeRecord.`lncrnadb`
-SET n.`enzyme_id` = nodeRecord.`enzyme_id`
+SET n.`enzyme_ids` = COALESCE(split(nodeRecord.`enzyme_id`,"|")," ")
 SET n.`intermediate_filament_db` = nodeRecord.`intermediate_filament_db`
-SET n.`rna_central_ids` = nodeRecord.`rna_central_ids`
+SET n.`rna_central_ids` = COALESCE(split(nodeRecord.`rna_central_ids`,"|")," ")
 SET n.`lncipedia` = nodeRecord.`lncipedia`
 SET n.`gtrnadb` = nodeRecord.`gtrnadb`
 SET n.`agr` = toInteger(trim(nodeRecord.`agr`))
 SET n.`mane_select` = nodeRecord.`mane_select`
 SET n.`gencc` = toInteger(trim(nodeRecord.`gencc`));
+',
+{batchSize:4000, iterateList:true, parallel:true});
 
-CREATE CONSTRAINT `imp_uniq_CosmicBreakPointMutation_ID_SAMPLE` IF NOT EXISTS
-FOR (n: `CosmicBreakPointMutation`)
-REQUIRE (n.`ID_SAMPLE`) IS UNIQUE;
-
-UNWIND $nodeRecords AS nodeRecord
-WITH *
-WHERE NOT nodeRecord.`ID_SAMPLE` IN $idsToSkip AND NOT toInteger(trim(nodeRecord.`ID_SAMPLE`)) IS NULL
-MERGE (n: `CosmicBreakPointMutation` { `ID_SAMPLE`: toInteger(trim(nodeRecord.`ID_SAMPLE`)) })
-SET n.`Sample name` = nodeRecord.`Sample name`
-SET n.`ID_TUMOUR` = toInteger(trim(nodeRecord.`ID_TUMOUR`))
-SET n.`Mutation Type` = nodeRecord.`Mutation Type`
-SET n.`Mutation ID` = toInteger(trim(nodeRecord.`Mutation ID`))
-SET n.`Breakpoint Order` = nodeRecord.`Breakpoint Order`
+// CosmicBreakPointMutation
+CALL apoc.periodic.iterate('
+CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicBreakpointsExport.tsv", { header:true,  sep:"TAB"}
+)
+YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
+','
+WHERE NOT toInteger(trim(nodeRecord.`ID_SAMPLE`)) IS NULL
+MERGE (n: `CosmicBreakpointMutation` { `mutation_id` = toInteger(trim(nodeRecord.`Mutation ID`)) })
+SET n.`sample_id`: toInteger(trim(nodeRecord.`ID_SAMPLE`))
+SET n.`sample_name` = nodeRecord.`Sample name`
+SET n.`tumor_id` = toInteger(trim(nodeRecord.`ID_TUMOUR`))
+SET n.`mutation_type` = nodeRecord.`Mutation Type`
+SET n.`breakpoint_order` = nodeRecord.`Breakpoint Order`
 SET n.`GRCh` = toInteger(trim(nodeRecord.`GRCh`))
-SET n.`Chrom From` = toInteger(trim(nodeRecord.`Chrom From`))
-SET n.`Location From min` = toInteger(trim(nodeRecord.`Location From min`))
-SET n.`Location From max` = toInteger(trim(nodeRecord.`Location From max`))
-SET n.`Strand From` = nodeRecord.`Strand From`
-SET n.`Chrom To` = toInteger(trim(nodeRecord.`Chrom To`))
-SET n.`Location To min` = toInteger(trim(nodeRecord.`Location To min`))
-SET n.`Location To max` = toInteger(trim(nodeRecord.`Location To max`))
-SET n.`Strand To` = nodeRecord.`Strand To`
-SET n.`Non-templated ins seq` = nodeRecord.`Non-templated ins seq`
-SET n.`Pubmed_PMID` = nodeRecord.`Pubmed_PMID`;
+SET n.`chrom_from` = nodeRecord.`Chrom From`
+SET n.`location_from_min` = toInteger(trim(nodeRecord.`Location From min`))
+SET n.`location_from_max` = toInteger(trim(nodeRecord.`Location From max`))
+SET n.`strand_from` = nodeRecord.`Strand From`
+SET n.`chrom_to` = tnodeRecord.`Chrom To`
+SET n.`location_to_min` = toInteger(trim(nodeRecord.`Location To min`))
+SET n.`location_to_max` = toInteger(trim(nodeRecord.`Location To max`))
+SET n.`strand_to` = nodeRecord.`Strand To`
+SET n.`non-templated_ins_seq` = nodeRecord.`Non-templated ins seq`
+SET n.`pub_id` = nodeRecord.`Pubmed_PMID`;
+',
+{batchSize:4000, iterateList:true, parallel:true});
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `Patient` { `id_individual`: toInteger(trim(relRecord.`id_individual`)) })
-MATCH (target: `Tumor` { `id_tumour`: toInteger(trim(relRecord.`id_tumour`)) })
+
+// Patient to Tumor relationship
+MATCH (source:CosmicPatient) WHERE source.individual_id IS NOT NULL
+MATCH (target:CosmicTumor) WHERE target.individual_id = source.individual_id
 MERGE (source)-[r: `HAS_TUMOR`]->(target);
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `Tumor` { `id_tumour`: toInteger(trim(relRecord.`id_tumour`)) })
-MATCH (target: `CosmicSample` { `sample_id`: toInteger(trim(relRecord.`sample_id`)) })
+// Tumor to Sample relationship
+MATCH (source:CosmicTumor) WHERE source.tumor_id IS NOT NULL
+MATCH (target:CosmicSample) WHERE target.tumor_id = source.tumor_id
 MERGE (source)-[r: `HAS_SAMPLE`]->(target);
 
-
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSample` { `sample_id`: toInteger(trim(relRecord.`cosmic_phenotype_id`)) })
-MATCH (target: `CosmicSampleClassification` { `COSMIC_PHENOTYPE_ID`: relRecord.`cosmic_phenotype_id` })
+// Sample to Sample Classification relationship
+MATCH (source:CosmicSample) WHERE source.`cosmic_phenotype_id`
+MATCH (target:CosmicSampleClassification) WHERE target.`cosmic_phenotype_id` = source.`cosmic_phenotype_id`
 MERGE (source)-[r: `HAS_CLASSIFICATION`]->(target);
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGene` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `CosmicGeneMutationCollection` { `Gene Symbol`: relRecord.`Gene Symbol` })
+// CosmicGene to CosmicGeneMutationCollection relationship
+MATCH (source:`CosmicGene`)
+MATCH (target: `CosmicGeneMutationCollection`) WHERE source.gene_symbol = target.gene_symbol
 MERGE (source)-[r: `HAS_GENE_MUTATION_COLLECTION`]->(target);
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGeneMutationCollection` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `CosmicMutation` { `MUTATION_ID`: toInteger(trim(relRecord.`Gene Symbol`)) })
+// CosmicMutationCollection to CosmicMutation relationship
+MATCH (source: `CosmicGeneMutationCollection` )
+MATCH (target: `CosmicMutation`) WHERE target.gene_symbol = source.gene_symbol
 MERGE (source)-[r: `HAS_MUTATION`]->(target);
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSample` { `sample_id`: toInteger(trim(relRecord.`sample_id`)) })
-MATCH (target: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`sample_id`)) })
+// CosmicSample to CosmicSampleMutationCollection relationship
+MATCH (source:CosmicSample)
+MATCH (target:CosmicSampleMutationCollection) WHERE target.sample_id = source.sample_id
 MERGE (source)-[r: `HAS_SAMPLE_MUTATION_COLLECTION`]->(target);
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`sample_id`)) })
-MATCH (target: `CosmicStucturalMutation` { `MUTATION_ID`: toInteger(trim(relRecord.`sample_id`)) })
-MERGE (source)-[r: `HAS_STRUCTURA_MUTATION`]->(target);
+// CosmicSampleMutationCollection to CosmicStructuralMutation relationship
+MATCH  (source:CosmicSampleMutationCollection)
+MATCH (target:CosmicStucturalMutation)  WHERE target.sample_id = source.sample_id
+MERGE (source)-[r: `HAS_STRUCTURAL_MUTATION`]->(target);
 
 UNWIND $relRecords AS relRecord
 MATCH (source: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`MUTATION_ID`)) })

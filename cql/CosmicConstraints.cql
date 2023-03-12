@@ -47,6 +47,19 @@ CREATE CONSTRAINT `imp_uniq_SynMIC_SynMIC_ID` IF NOT EXISTS
 FOR (n: `SynMIC`)
 REQUIRE (n.synmic_id`) IS UNIQUE;
 
+CREATE CONSTRAINT `imp_uniq_AltSpliceCancer_id` IF NOT EXISTS
+FOR (n: `AltSpliceCancer`)
+REQUIRE (n.`id`) IS UNIQUE;
+
+CREATE CONSTRAINT `imp_uniq_HGNC_hgnc_id` IF NOT EXISTS
+FOR (n: `HGNC`)
+REQUIRE (n.`hgnc_id`) IS UNIQUE;
+
+CREATE CONSTRAINT `imp_uniq_CosmicBreakpointMutation_IMUTATION_ID` IF NOT EXISTS
+FOR (n: `CosmicBreakpointMutation`)
+REQUIRE (n.`mutation_id`) IS UNIQUE;
+
+
 
 CREATE INDEX synmut_gene_symbol_index IF NOT EXISTS FOR (syn:SynonymousMutation) ON (syn.gene_symbol)
 CREATE INDEX asc_gene_symbol_index IF NOT EXISTS FOR (asc:ASCancer) ON (asc.gene_symvol)
