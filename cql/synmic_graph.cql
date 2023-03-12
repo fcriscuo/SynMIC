@@ -116,6 +116,11 @@ SET n.`synonyms` = nodeRecord.synonyms;
 ',
 {batchSize:1000, iterateList:true, parallel:true});
 
+// CosmicGeneHallmarkCollection
+MATCH(gene:CosmicGene) WHERE gene.is_hallmark = 'yes'
+MERGE (hgc:HallmarkGeneCollection{gene_symbol:hallmark.gene_symbol})
+MERGE (hgc)-[r:HAS_HALLMARK_COLLECTION]-(hallmark);
+
 
 // CosmicMutation
 CALL apoc.periodic.iterate('
@@ -477,99 +482,129 @@ SET n.`pub_id` = nodeRecord.`Pubmed_PMID`;
 
 
 // Patient to Tumor relationship
-MATCH (source:CosmicPatient) WHERE source.individual_id IS NOT NULL
-MATCH (target:CosmicTumor) WHERE target.individual_id = source.individual_id
-MERGE (source)-[r: `HAS_TUMOR`]->(target);
+CALL {
+MATCH(source:CosmicPatient)
+  WHERE source.individual_id IS NOT NULL
+MATCH(target:CosmicTumor)
+  WHERE target.individual_id = source.individual_id
+MERGE (source)-[r:`HAS_TUMOR`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
 // Tumor to Sample relationship
+CALL {
 MATCH (source:CosmicTumor) WHERE source.tumor_id IS NOT NULL
 MATCH (target:CosmicSample) WHERE target.tumor_id = source.tumor_id
-MERGE (source)-[r: `HAS_SAMPLE`]->(target);
+MERGE (source)-[r: `HAS_SAMPLE`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
 // Sample to Sample Classification relationship
-MATCH (source:CosmicSample) WHERE source.`cosmic_phenotype_id`
-MATCH (target:CosmicSampleClassification) WHERE target.`cosmic_phenotype_id` = source.`cosmic_phenotype_id`
-MERGE (source)-[r: `HAS_CLASSIFICATION`]->(target);
+CALL {
+MATCH(source:CosmicSample)
+  WHERE source.`cosmic_phenotype_id`
+MATCH(target:CosmicSampleClassification)
+  WHERE target.`cosmic_phenotype_id` = source.`cosmic_phenotype_id`
+MERGE (source)-[r:`HAS_CLASSIFICATION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
 // CosmicGene to CosmicGeneMutationCollection relationship
+CALL {
 MATCH (source:`CosmicGene`)
 MATCH (target: `CosmicGeneMutationCollection`) WHERE source.gene_symbol = target.gene_symbol
-MERGE (source)-[r: `HAS_GENE_MUTATION_COLLECTION`]->(target);
+MERGE (source)-[r: `HAS_GENE_MUTATION_COLLECTION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
-// CosmicMutationCollection to CosmicMutation relationship
+// CosmicGeneMutationCollection to CosmicMutation relationship
+CALL {
 MATCH (source: `CosmicGeneMutationCollection` )
 MATCH (target: `CosmicMutation`) WHERE target.gene_symbol = source.gene_symbol
-MERGE (source)-[r: `HAS_MUTATION`]->(target);
+MERGE (source)-[r: `HAS_MUTATION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
 // CosmicSample to CosmicSampleMutationCollection relationship
+CALL {
 MATCH (source:CosmicSample)
 MATCH (target:CosmicSampleMutationCollection) WHERE target.sample_id = source.sample_id
-MERGE (source)-[r: `HAS_SAMPLE_MUTATION_COLLECTION`]->(target);
+MERGE (source)-[r: `HAS_SAMPLE_MUTATION_COLLECTION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
 // CosmicSampleMutationCollection to CosmicStructuralMutation relationship
+CALL {
 MATCH  (source:CosmicSampleMutationCollection)
 MATCH (target:CosmicStucturalMutation)  WHERE target.sample_id = source.sample_id
-MERGE (source)-[r: `HAS_STRUCTURAL_MUTATION`]->(target);
+MERGE (source)-[r: `HAS_STRUCTURAL_MUTATION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`MUTATION_ID`)) })
-MATCH (target: `CosmicMutation` { `MUTATION_ID`: toInteger(trim(relRecord.`MUTATION_ID`)) })
-MERGE (source)-[r: `HAS_MUTATION`]->(target);
+// CosmicSampleMutationCollection to CosmicMutation relationship
+CALL {
+MATCH (source: `CosmicSampleMutationCollection`)
+MATCH (target: `CosmicMutation`) WHERE target_.sample_id = source.sample_id
+MERGE (source)-[r: `HAS_MUTATION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGene` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `CosmicGeneHallmark` { `HALLMARK_ID`: toInteger(trim(relRecord.`Gene Symbol`)) })
-MERGE (source)-[r: `HAS_COSMIC_HALLMARK`]->(target);
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`sample_id`)) })
-MATCH (target: `CosmicResistanceMutation` { `MUTATION_ID`: toInteger(trim(relRecord.`sample_id`)) })
+// CosmicSampleMutationCollection to CosmicResistanceMutation relationship
+CALL {
+MATCH (source: `CosmicSampleMutationCollection`)
+MATCH (target: `CosmicResistanceMutation`) WHERE target.sample_id = source.sample_id
 MERGE (source)-[r: `HAS_RESISTANCE_MUTATION`]->(target);
+} IN TRANSACTIONS OF 1000 ROWS;
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGeneMutationCollection` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `CosmicResistanceMutation` { `MUTATION_ID`: toInteger(trim(relRecord.`Gene Symbol`)) })
-MERGE (source)-[r: `HAS_RESISTANCE_MUTATION`]->(target);
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGeneMutationCollection` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `CosmicStucturalMutation` { `MUTATION_ID`: toInteger(trim(relRecord.`Gene Symbol`)) })
-MERGE (source)-[r: `HAS_STRUCTURAL_MUTATION`]->(target);
+// CosmicGeneMutationCollection to CosmicResistanceMutation
+CALL {
+MATCH (source: `CosmicGeneMutationCollection`)
+MATCH (target: `CosmicResistanceMutation`) WHERE target.gene_symbol = source.gene_symbol
+MERGE (source)-[r: `HAS_RESISTANCE_MUTATION`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGeneMutationCollection` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `SynMIC` { `SynMIC_ID`: toInteger(trim(relRecord.`Gene Symbol`)) })
-MERGE (source)-[r: `HAS_SYNONYMOUS_MUTATION`]->(target);
+// CosmicGeneMutationCollection to CosmicStructuralMutation relationship
+CALL {
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`sample_name`)) })
-MATCH (target: `SynMIC` { `SynMIC_ID`: toInteger(trim(relRecord.`sample_name`)) })
-MERGE (source)-[r: `HAS_SYNONYMOUS_MUTATION`]->(target);
+MATCH (source:`CosmicGeneMutationCollection`)
+MATCH(target:`CosmicStucturalMutation`)
+  WHERE target.gene_symbol = source.gene_symbol
+MERGE (source)-[r:`HAS_STRUCTURAL_MUTATION`]->(target);
+} IN TRANSACTIONS OF 1000 ROWS;
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGene` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `AltSpliceCancer` { `id`: relRecord.`Gene Symbol` })
+// CosmicGeneMutationCollection to CosmicStructuralMuttaion
+CALL {
+MATCH (source:`CosmicGeneMutationCollection`)
+MATCH(target:`SynMIC`)
+  WHERE target.gene_symbol = source.gene_symbol
+MERGE (source)-[r:`HAS_SYNONYMOUS_MUTATION`]->(target);
+} IN TRANSACTIONS OF 1000 ROWS;
+
+// CosmicGene to AltSpliceCancer relationship
+CALL  {
+MATCH (source: `CosmicGene`)
+MATCH (target: `AltSpliceCancer`) WHERE target.gene_symbol = source.gene_symbol
 MERGE (source)-[r: `HAS_ALTERNATE_SPLICING`]->(target);
+} IN TRANSACTIONS OF 1000 ROWS;
 
+// AltSpliceCancer to HGNC relationship
+CALL {
+MATCH (source: `AltSpliceCancer` ) WHERE source.hgnc_id IS NOT NULL
+MATCH (target: `HGNC`) WHERE target.hgnc_id = source.hgnc_id
+MERGE (source)-[r: `HAS_HGNC`]->(target)
+} IN TRANSACTIONS OF 1000 ROWS;
+
+// CosmicGene to HGNC relationship (too small for batching)
 UNWIND $relRecords AS relRecord
-MATCH (source: `AltSpliceCancer` { `id`: relRecord.`hgnc_id` })
-MATCH (target: `HGNC` { `hgnc_id`: toInteger(trim(relRecord.`hgnc_id`)) })
+MATCH (source: `CosmicGene`)
+MATCH (target: `HGNC`) WHERE target.gene_symbol = source.gene_symbol
 MERGE (source)-[r: `HAS_HGNC`]->(target);
 
-
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGene` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `HGNC` { `hgnc_id`: toInteger(trim(relRecord.`Gene Symbol`)) })
-MERGE (source)-[r: `HAS_HGNC`]->(target);
-
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicSampleMutationCollection` { `sample_id`: toInteger(trim(relRecord.`sample_id`)) })
-MATCH (target: `CosmicBreakPointMutation` { `ID_SAMPLE`: toInteger(trim(relRecord.`sample_id`)) })
+// CosmicSampleMutationCollection to CosmicBreakpointMutation
+CALL {
+MATCH (source: `CosmicSampleMutationCollection`)
+MATCH (target: `CosmicBreakPointMutation`) WHERE target.sample_id = source.sample_id
 MERGE (source)-[r: `HAS_BREAKPOINT_MUTATION`]->(target);
+} IN TRANSACTIONS OF 1000 ROWS;
 
-UNWIND $relRecords AS relRecord
-MATCH (source: `CosmicGeneMutationCollection` { `Gene Symbol`: relRecord.`Gene Symbol` })
-MATCH (target: `CosmicBreakPointMutation` { `ID_SAMPLE`: toInteger(trim(relRecord.`Gene Symbol`)) })
+// CosmicGeneMutationCollection to CosmicBreakpointMutation
+CALL {
+MATCH (source: `CosmicGeneMutationCollection` )
+MATCH (target: `CosmicBreakPointMutation`) WHERE target.gene_symbol = source.gene_symbol
 MERGE (source)-[r: `HAS_BREAKPOINT_MUTATION`]->(target);
-
+} IN TRANSACTIONS OF 1000 ROWS;
 
 
 
