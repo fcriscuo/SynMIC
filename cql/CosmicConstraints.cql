@@ -6,6 +6,9 @@ CREATE CONSTRAINT `imp_uniq_CosmicSample_sample_id` IF NOT EXISTS
 FOR (n: `CosmicSample`)
 REQUIRE (n.`sample_id`) IS UNIQUE;
 
+CREATE CONSTRAINT `imp_uniq_CosmicSampleMutationCollection_sample_id` IF NOT EXISTS
+FOR (n: `CosmicSampleMutationCollection`)
+REQUIRE (n.`sample_id`) IS UNIQUE;
 
 CREATE CONSTRAINT `imp_uniq_Patient_id_individual` IF NOT EXISTS
 FOR (n: `Patient`)
@@ -17,6 +20,10 @@ REQUIRE (n.`id_tumour`) IS UNIQUE;
 
 CREATE CONSTRAINT `imp_uniq_CosmicGene_Gene_Symbol` IF NOT EXISTS
 FOR (n: `CosmicGene`)
+REQUIRE (n.`Gene Symbol`) IS UNIQUE;
+
+CREATE CONSTRAINT `imp_uniq_CosmicGeneMutationCollection_Gene_Symbol` IF NOT EXISTS
+FOR (n: `CosmicGeneMutationCollection`)
 REQUIRE (n.`Gene Symbol`) IS UNIQUE;
 
 CREATE CONSTRAINT `imp_uniq_CosmicMutation_MUTATION_ID` IF NOT EXISTS
@@ -59,7 +66,14 @@ CREATE CONSTRAINT `imp_uniq_CosmicBreakpointMutation_IMUTATION_ID` IF NOT EXISTS
 FOR (n: `CosmicBreakpointMutation`)
 REQUIRE (n.`mutation_id`) IS UNIQUE;
 
+CREATE CONSTRAINT `imp_uniq_CosmicActionability_ID` IF NOT EXISTS
+FOR(n:`CosmicActionability`)
+REQUIRE (n.`actionability_id`) IS UNIQUE;
 
+// Publication Constraint
+CREATE CONSTRAINT `imp_uniq_Publication_pub_id` IF NOT EXISTS
+FOR (n: `Publication`)
+REQUIRE (n.`pub_id`) IS UNIQUE;
 
 CREATE INDEX synmut_gene_symbol_index IF NOT EXISTS FOR (syn:SynonymousMutation) ON (syn.gene_symbol)
 CREATE INDEX asc_gene_symbol_index IF NOT EXISTS FOR (asc:ASCancer) ON (asc.gene_symvol)
