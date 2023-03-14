@@ -25,3 +25,14 @@ hs_err_pid*
 data/
 target/
 logs/
+src/.DS_Store
+
+src/main/.DS_Store
+
+src/main/kotlin/.DS_Store
+
+src/main/kotlin/org/.DS_Store
+
+src/main/kotlin/org/batteryparkdev/.DS_Store
+
+src/main/kotlin/org/batteryparkdev/synmic/.DS_Store

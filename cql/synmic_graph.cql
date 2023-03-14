@@ -41,8 +41,8 @@ SET n.`cosmic_phenotype_id` = toInteger(trim(nodeRecord.`cosmic_phenotype_id`));
 // CosmicSample to CosmicSampleMutationCollection
 CALL {
 MATCH (source: CosmicSample)
-MERGE (target: CosmicSampleMutationCollection{ sample_id: toInteger(source.sample_id,
- sample_name: source.sample_name)})
+MERGE (target: CosmicSampleMutationCollection{ sample_id: toInteger(source.sample_id),
+ sample_name: source.sample_name})
 MERGE  (source)-[r:HAS_MUTATION_COLLECTION]->(target)
 }IN TRANSACTIONS OF 1000 ROWS;
 
@@ -121,6 +121,7 @@ SET n.`other_germline_mut` = nodeRecord.`Other Germline Mut`
 SET n.`other_syndromes` = nodeRecord.`other_syndromes`
 SET n.`cosmic_id` = nodeRecord.`COSMIC ID`
 SET n.`cosmic gene name` = nodeRecord.`cosmic gene name`
+SET n.cosmic_url= replace("https://cancer.sanger.ac.uk/cosmic/gene/analysis?ln=XXXX", "XXXX",n.gene_symbol)
 SET n.`synonyms` = nodeRecord.synonyms;
 ',
 {batchSize:1000, iterateList:true, parallel:true});
@@ -134,6 +135,19 @@ MERGE (gene)-[r:HAS_HALLMARK_COLLECTION]-(hgc);
 MATCH (source:CosmicGene)
 MERGE(target: CosmicGeneMutationCollection {gene_symbol: source.gene_symbol})
 MERGE (source)-[r:HAS_MUTATION_COLLECTION]->(target)
+
+// Link CosmicGene translocation partners
+MATCH (gene:CosmicGene) WHERE  gene.translocation_partner <> ""
+MATCH(partner:CosmicGene) WHERE partner.gene_symbol=gene.translocation_partner
+MERGE (gene)-[r:HAS_TRANSLOCATION_PARTNER]-(partner)
+;
+
+// Add URL to Entrez Gene page if Entrez ID is available
+MATCH (cg:CosmicGene) WHERE cg.entrez_id is not null
+SET cg.entrez_gene_url= replace("https://www.ncbi.nlm.nih.gov/gene/?term=XXXX","XXXX",cg.entrez_id)
+MATCH (eg:EntrezGene) WHERE eg.gene_id = cg.entrez_id
+MERGE (cg)-[r1:HAS_ENTREZ_GENE]-(eg)
+;
 
 // CosmicMutation
 CALL apoc.periodic.iterate('
@@ -206,6 +220,8 @@ SET n.`EFO` = nodeRecord.`EFO`;
 ',
 {batchSize:1000, iterateList:true, parallel:true});
 
+match (cl:CosmicSampleClassification) where cl.nci_code is not null 
+set cl.url = replace("https://ncit.nci.nih.gov/ncitbrowser/ConceptReport.jsp?dictionary=NCI%20Thesaurus&code=XXXX","XXXX",cl.nci_code) ;
 
 // CosmicStructuralMutation
 CALL apoc.periodic.iterate('
@@ -224,9 +240,6 @@ SET n.`description` = nodeRecord.`description`
 SET n.`pub_id` = nodeRecord.`PUBMED_PMID`;
 ',
 {batchSize:4000, iterateList:true, parallel:true});
-
-
-
 
 // CosmicResistanceMutation
 CALL apoc.periodic.iterate('
@@ -471,6 +484,42 @@ SET n.`pub_id` = nodeRecord.`Pubmed_PMID`;
 ',
 {batchSize:4000, iterateList:true, parallel:true});
 
+// CosmicCMC
+CALL apoc.periodic.iterate('
+CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CMC/cmc_export.tsv", { header:true,  sep:"TAB"}
+)
+YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
+','
+MERGE (cmc:CosmicCMC {legacy_mutation_id:nodeRecord.LEGACY_MUTATION_ID})
+SET cmc.gene_symbol = nodeRecord.GENE_NAME,
+  cmc.accession_number = nodeRecord.ACCESSION_NUMBER,
+  cmc.onc_tsg = nodeRecord.ONC_TSG,
+  cmc.cgc_tier = toInteger(nodeRecord.CGC_TIER),
+  cmc.mutation_url = nodeRecord.MUTATION_URL,
+  cmc.muation_cds = nodeRecord.`Mutation CDS`,
+  cmc.mutation_aa = nodeRecord.`Mutation AA`,
+  cmc.aa_mut_start = toInteger(nodeRecord.AA_MUT_START),
+  cmc.aa_mut_stop = toInteger(nodeRecord.AA_MUT_STOP),
+  cmc.shared_aa = nodeRecord.SHARED_AA,
+  cmc.genomic_wt_allele_seq = nodeRecord.GENOMIC_WT_ALLELE_SEQ,
+  cmc.genomic_mut_allele_seq= nodeRecord.GENOMIC_MUT_ALLELE_SEQ,
+  cmc.aa_wt_allele_seq = nodeRecord.AA_WT_ALLELE_SEQ,
+  cmc.aa_mut_allele_seq = nodeRecord.AA_MUT_ALLELE_SEQ,
+  cmc.mutation_description_cds = nodeRecord.`Mutation Description CDS`,
+  cmc.mutation_description_aa = nodeRecord.`Mutation Description AA`,
+  cmc.ontology_mutation_code = nodeRecord.ONTOLOGY_MUTATION_CODE,
+  cmc.genomic_mutation_id = nodeRecord.GENOMIC_MUTATION_ID,
+  cmc.mutation_genome_position_grch37 = nodeRecord.`Mutation genome position GRCh37`,
+  cmc.mutation_genome_position_grch38 = nodeRecord.`Mutation genome position GRCh38`,
+  cmc.cosmic_sample_tested = toInteger(nodeRecord.COSMIC_SAMPLE_TESTED),
+  cmc.cosmic_sample_mutated = toInteger(nodeRecord.COSMIC_SAMPLE_MUTATED),
+  cmc.disease = nodeRecord.DISEASE,
+  cmc.wgs_disease = nodeRecord.WHS_DISEASE
+',
+{batchSize:4000, iterateList:true, parallel:true});
+
+
+
 // CosmicActionability
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/ActionabilityData.tsv", { header:true,  sep:"TAB"}
@@ -543,6 +592,23 @@ SET action.gene_symbol=nodeRecord.GENE,
   action.timepoinr=nodeRecord.TIMEPOINT,
   action.classification_id=nodeRecord.CLASSIFICATION_ID,
   action.last_update=nodeRecord.LAST_UPDATED
+',
+{batchSize:4000, iterateList:true, parallel:true});
+
+// CosmicMutationTracking
+CALL apoc.periodic.iterate('
+CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicMutationTracking.tsv", { header:true,  sep:"TAB"}
+)
+YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
+','
+MERGE (track:CosmicMutationTracking {mutation_id:toInteger(nodeRecord.MUTATION_ID)})
+SET track.gene_symbol = nodeRecord.GENE_NAME,
+  track.accession_number = nodeRecord.ACCESSION_NUMBER,
+  track.genomic_mutation_id = nodeRecord.GENOMIC_MUTATION_ID,
+  track.legacy_mutation_id = nodeRecord.LEGACY_MUTATION_ID,
+  track.GRCh = nodeRecord.GRCH,
+  track.mutation_type = nodeRecord.MUTATION_TYPE,
+  track.is_canonical = toUpper(nodeRecord.IS_CANONICAL)
 ',
 {batchSize:4000, iterateList:true, parallel:true});
 
@@ -628,7 +694,6 @@ MERGE (source)-[r: `HAS_RESISTANCE_MUTATION`]->(target)
 
 // CosmicGeneMutationCollection to CosmicStructuralMutation relationship
 CALL {
-
 MATCH (source:`CosmicGeneMutationCollection`)
 MATCH(target:`CosmicStucturalMutation`)
   WHERE target.gene_symbol = source.gene_symbol
@@ -684,7 +749,52 @@ MATCH (clas:CosmicClassification) WHERE class.phenotype_id = act.classification_
 MERGE (class)-[r:HAS_ACTIONAVAILABILY]->(act)
 }IN TRANSACTIONS OF 1000 ROWS;
 
+// CosmicGeneMutationCollection to CosmicCMC relationship
+CALL {
+MATCH (cmc:CosmicCMC) WHERE cmc.gene_symbol IS NOT NULL
+MATCH (gmc:GeneMutationCollection) WHERE gmc.gene_symbol = cmc.gene_symbol
+MERGE (gmc) -[r1:HAS_CODING_MUTATION]->(cmc)
+}IN TRANSACTIONS OF 1000 ROWS;
 
+// CosmicMutation to CosmicMutationTracking Relationship
+CALL {
+MATCH (track:CosmicMutationTracking) WHERE track.mutation_id IS NOT NULL
+MATCH (mut:CosmicMutation) WHERE mut.mutation_id = track.mutation_id
+MERGE (mut)-[r1:HAS_MUTATION_TRACKING]->(track)
+}IN TRANSACTIONS OF 1000 ROWS;
+
+// Add Publication nodes and relationships
+// CosmicBreakpoint publications
+CALL {
+MATCH(break:CosmicBreakpoint) WHERE break.pub_id IS NOT NULL
+MERGE(p:Publication{ pub_id:toInteger(break.pub_id)})
+SET p.url= genomiccore.resolvePubmedUrl(break.pub_id)
+MERGE (break)-[r2:HAS_PUBLICATION]->(p)
+}IN TRANSACTIONS OF 1000 ROWS;
+
+// CosmicMutation publications
+CALL {
+MATCH (ccm:CosmicMutation) WHERE ccm.pub_id IS NOT NULL
+MERGE(p:Publication{ pub_id:ccm.pub_id})
+SET p.url= genomiccore.resolvePubmedUrl(toString(ccm.pub_id))
+MERGE (ccm)-[HAS_PUBLICATION]->(p)
+}IN TRANSACTIONS OF 1000 ROWS;
+
+// CosmicResistantMutation publications
+CALL {
+MATCH(resist:CosmicResistanceMutation) WHERE resist.pub_id IS NOT NULL
+MERGE(p:Publication{ pub_id:toInteger(resist.pub_id)})
+SET p.url= genomiccore.resolvePubmedUrl(resist.pub_id)
+MERGE (resist)-[r1:HAS_PUBLICATION]->(p)
+}IN TRANSACTIONS OF 1000 ROWS;
+
+// CosmicHallmark publications
+CALL {
+MATCH(hallmark:CosmicHallmark) WHERE hallmark.pub_id IS NOT NULL
+MERGE(p:Publication{ pub_id:toInteger(hallmark.pub_id)})
+SET p.url= genomiccore.resolvePubmedUrl(hallmark.pub_id)
+MERGE (hallmark)-[r:HAS_PUBLICATION]->(p)
+}IN TRANSACTIONS OF 1000 ROWS;
 
 
 

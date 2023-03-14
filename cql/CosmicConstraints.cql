@@ -75,5 +75,12 @@ CREATE CONSTRAINT `imp_uniq_Publication_pub_id` IF NOT EXISTS
 FOR (n: `Publication`)
 REQUIRE (n.`pub_id`) IS UNIQUE;
 
+// CosmicCMC Constraint
+//MERGE (cmc:CosmicCMC {legacy_mutation_id:nodeRecord.LEGACY_MUTATION_ID})
+CREATE CONSTRAINT `imp_uniq_CosmicCMC_legacy_mutation_id` IF NOT EXISTS
+FOR (n: `CosmicCMC`)
+REQUIRE (n.`legacy_mutation_id`) IS UNIQUE;
+
+
 CREATE INDEX synmut_gene_symbol_index IF NOT EXISTS FOR (syn:SynonymousMutation) ON (syn.gene_symbol)
 CREATE INDEX asc_gene_symbol_index IF NOT EXISTS FOR (asc:ASCancer) ON (asc.gene_symvol)
