@@ -92,7 +92,7 @@
             <artifactId>genomicgraphcore</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/lib/genomicgraphcore-1.0-SNAPSHOT.jar</systemPath>
+            <systemPath>${project.basedir}/lib/GenomicGraphCore-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
         <!-- Neo4j front end requires scala 2.12.13-->
         <!-- https://mvnrepository.com/artifact/org.scala-lang/scala-library -->
