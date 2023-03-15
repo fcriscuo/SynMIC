@@ -16,14 +16,17 @@ SET n.`description` = nodeRecord.`DESCRIPTION`
 ',
 {batchSize:1000, iterateList:true, parallel:true});
 
-// CosmicSample
+// CosmicSample & CosmicSampleMutationCollection nodes
 CALL apoc.periodic.iterate('
 CALL apoc.load.csv("/Volumes/SSD870/COSMIC_rel97/CosmicSample.tsv", { header:true,  sep:"TAB"})
 YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
-',' 
+','
 WHERE NOT toInteger(trim(nodeRecord.`sample_id`)) IS NULL
 MERGE (n: `CosmicSample` { `sample_id`: toInteger(trim(nodeRecord.`sample_id`)) })
+MERGE (csmc: `CosmicSampleMutationCollection`{ `sample_id`: toInteger(trim(nodeRecord.`sample_id`)) })
+MERGE  (n)-[r:HAS_MUTATION_COLLECTION]->(csmc)
 SET n.`sample_name` = nodeRecord.`sample_name`
+SET csmc.`sample_name` = nodeRecord.`sample_name`
 SET n.`tumor_id` = toInteger(trim(nodeRecord.`id_tumour`))
 SET n.`therapy_relationship` = nodeRecord.`therapy_relationship`
 SET n.`sample_differentiator` = nodeRecord.`sample_differentiator`
@@ -37,15 +40,6 @@ SET n.`sample_type` = nodeRecord.`sample_type`
 SET n.`cosmic_phenotype_id` = toInteger(trim(nodeRecord.`cosmic_phenotype_id`));
  ',
 {batchSize:1000, iterateList:true, parallel:true});
-
-// CosmicSample to CosmicSampleMutationCollection
-CALL {
-MATCH (source: CosmicSample)
-MERGE (target: CosmicSampleMutationCollection{ sample_id: toInteger(source.sample_id),
- sample_name: source.sample_name})
-MERGE  (source)-[r:HAS_MUTATION_COLLECTION]->(target)
-}IN TRANSACTIONS OF 1000 ROWS;
-
 
 // CosmicPatient
 CALL apoc.periodic.iterate('
@@ -101,6 +95,8 @@ YIELD lineNo, map AS nodeRecord RETURN nodeRecord, lineNo
 ','
 WHERE NOT nodeRecord.`Gene Symbol` IS NULL
 MERGE (n: `CosmicGene` { gene_symbol: nodeRecord.`Gene Symbol` })
+MERGE (cgmc: `CosmicGeneMutationCollection` {gene_symbol: nodeRecord.`GeneSymbol`})
+MERGE (n)-[r:HAS_MUTATION_COLLECTION]->(cgmc)
 SET n.`gene_name` = nodeRecord.`Name`
 SET n.`entrez_gene_id` = toInteger(trim(nodeRecord.`Entrez GeneId`))
 SET n.`genome_location` = nodeRecord.`Genome Location`
@@ -131,14 +127,10 @@ MATCH(gene:CosmicGene) WHERE gene.is_hallmark = 'yes'
 MERGE (hgc:HallmarkGeneCollection{gene_symbol:hallmark.gene_symbol})
 MERGE (gene)-[r:HAS_HALLMARK_COLLECTION]-(hgc);
 
-// CosmicGene to CosmicGeneMutationCollection relationship
-MATCH (source:CosmicGene)
-MERGE(target: CosmicGeneMutationCollection {gene_symbol: source.gene_symbol})
-MERGE (source)-[r:HAS_MUTATION_COLLECTION]->(target)
-
 // Link CosmicGene translocation partners
-MATCH (gene:CosmicGene) WHERE  gene.translocation_partner <> ""
-MATCH(partner:CosmicGene) WHERE partner.gene_symbol=gene.translocation_partner
+MATCH (gene:CosmicGene) WHERE  gene.translocation_partners IS NOT NULL
+UNWIND gene.translocation_partners AS translocation
+MATCH(partner:CosmicGene) WHERE partner.gene_symbol=translocation
 MERGE (gene)-[r:HAS_TRANSLOCATION_PARTNER]-(partner)
 ;
 
